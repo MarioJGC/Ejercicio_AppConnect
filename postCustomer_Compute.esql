@@ -1,0 +1,41 @@
+
+
+CREATE COMPUTE MODULE postCustomer_Compute
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+
+		DECLARE inputJson REFERENCE TO InputRoot.JSON.Data;
+		
+		-- Declaramos campos
+		DECLARE customerId CHARACTER;
+		DECLARE productCode CHARACTER;
+		DECLARE ruc CHARACTER;
+		DECLARE currencyCode CHARACTER;
+		DECLARE filer CHARACTER; 
+		
+		DECLARE trama CHARACTER;
+		
+		SET customerId = inputJson.customerId;
+		SET productCode = inputJson.productCode;
+		SET ruc = inputJson.ruc;
+		SET currencyCode = inputJson.currencyCode;
+		SET filer = inputJson.filer;
+		
+		SET trama = customerId || productCode || ruc || currencyCode || filer;
+		
+		CREATE LASTCHILD OF OutputRoot DOMAIN 'JSON';
+        CREATE FIELD OutputRoot.JSON.Data;
+        DECLARE refRes REFERENCE TO OutputRoot.JSON.Data;
+        
+		SET refRes.trama = trama;
+        
+		-- concatenar y hacer una trama
+		-- luego en otro nodo los descompengo y hago validadiones
+		-- hago un propagate para cada mensaje y controlo el error
+		-- indicando los campos que indica el excel
+		-- el failure no es necesario utilizar
+		
+		RETURN TRUE;
+	END;
+
+END MODULE;

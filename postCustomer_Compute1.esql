@@ -1,0 +1,113 @@
+
+
+CREATE COMPUTE MODULE postCustomer_Compute1
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		
+		DECLARE inputJson REFERENCE TO InputRoot.JSON.Data;
+		
+		-- Declaracion de campos
+		 DECLARE WVC_COD_UNICO CHARACTER;
+		 DECLARE WVC_COD_PRODUCTO CHARACTER;
+		 DECLARE WVC_RUC CHARACTER;
+		 DECLARE WVC_CODMON CHARACTER;
+		 DECLARE WVC_INP_FILLER CHARACTER;
+		 
+		-- Declaracion de longitudes esperadas
+		 DECLARE LEN_WVC_COD_UNICO INT 10;
+		 DECLARE LEN_WVC_COD_PRODUCTO INT 3;
+		 DECLARE LEN_WVC_RUC INT 11;
+		 DECLARE LEN_WVC_CODMON INT 3;
+		 DECLARE LEN_WVC_INP_FILLER INT 10;
+		 
+		-- Descomponemos la trama
+		DECLARE trama CHARACTER; 
+		SET trama = inputJson.trama;
+		
+		IF LENGTH(trama) <> (LEN_WVC_COD_UNICO + LEN_WVC_COD_PRODUCTO + LEN_WVC_RUC + LEN_WVC_CODMON + LEN_WVC_INP_FILLER) THEN
+			
+			CREATE LASTCHILD OF OutputRoot DOMAIN 'JSON';
+			CREATE FIELD OutputRoot.JSON.Data;
+			DECLARE refErr REFERENCE TO OutputRoot.JSON.Data;
+			
+			CREATE FIELD refErr.status;
+			SET refErr.status.code = '400';
+			SET refErr.status.description = 'Longitud de la trama invalida';
+			
+			CREATE FIELD refErr.exceptionDetails IDENTITY (JSON.Array);
+			
+		    DECLARE refDetail REFERENCE TO refErr.exceptionDetails[1];
+		    SET refDetail.code = '400';
+		    SET refDetail.component = 'Validacion';
+		    SET refDetail.description = 'Longitud de la trama invalida';
+			
+			PROPAGATE TO TERMINAL 0;
+		END IF;
+		
+		-- Descomposicion de la trama
+		SET WVC_COD_UNICO = SUBSTRING(trama FROM 1 FOR LEN_WVC_COD_UNICO);
+		SET WVC_COD_PRODUCTO = SUBSTRING(trama FROM 11 FOR LEN_WVC_COD_PRODUCTO);
+		SET WVC_RUC = SUBSTRING(trama FROM 14 FOR LEN_WVC_RUC);
+		SET WVC_CODMON = SUBSTRING(trama FROM 25 FOR LEN_WVC_CODMON);
+		SET WVC_INP_FILLER = SUBSTRING(trama FROM 28 FOR LEN_WVC_INP_FILLER);
+		
+		
+		-- Validación de longitudes
+		IF LENGTH(WVC_COD_UNICO) <> LEN_WVC_COD_UNICO THEN
+		    CALL PropagateError('002', 'Invalid customerId length');
+		    RETURN TRUE;
+		END IF;
+		
+		IF LENGTH(WVC_COD_PRODUCTO) <> LEN_WVC_COD_PRODUCTO THEN
+		    CALL PropagateError('003', 'Invalid productCode length');
+		    RETURN TRUE;
+		END IF;
+		
+		IF LENGTH(WVC_RUC) <> LEN_WVC_RUC THEN
+		    CALL PropagateError('004', 'Invalid ruc length');
+		    RETURN TRUE;
+		END IF;
+		
+		IF LENGTH(WVC_CODMON) <> LEN_WVC_CODMON THEN
+		    CALL PropagateError('005', 'Invalid currencyCode length');
+		    RETURN TRUE;
+		END IF;
+		
+		IF LENGTH(WVC_INP_FILLER) <> LEN_WVC_INP_FILLER THEN
+		    CALL PropagateError('006', 'Invalid filer length');
+		    RETURN TRUE;
+		END IF;
+		
+		CREATE LASTCHILD OF OutputRoot DOMAIN 'JSON';
+		CREATE FIELD OutputRoot.JSON.Data;
+		DECLARE resOutOk REFERENCE TO OutputRoot.JSON.Data;
+		
+		
+		
+		
+		RETURN TRUE;
+	END;
+	
+	-- Metodo que crea la trama de salida
+	CREATE PROCEDURE PropagateError(IN errorCode CHARACTER, IN errorDescription CHARACTER)
+	BEGIN
+		
+		CREATE LASTCHILD OF OutputRoot DOMAIN 'JSON';
+		CREATE FIELD OutputRoot.JSON.Data;
+		DECLARE resOut REFERENCE TO OutputRoot.JSON.Data;
+		
+		CREATE FIELD resOut.status;
+		
+		SET resOut.status.code = errorCode;
+		SET resOut.status.description = errorDescription;
+		
+		CREATE FIELD resOut.exceptionDetails IDENTITY (JSON.Array);
+		
+		DECLARE refDetail REFERENCE TO resOut.exceptionDetails[1];
+	 	SET refDetail.code = errorCode;
+		SET refDetail.component = 'Validacion';
+		SET refDetail.description = errorDescription;
+		
+	END;
+
+END MODULE;
